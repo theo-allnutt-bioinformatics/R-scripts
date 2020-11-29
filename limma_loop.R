@@ -1,0 +1,100 @@
+#!/usr/bin/env Rscript
+
+#install.packages("devtools") # if not already installed
+#devtools::install_github("biomformat", "joey711")
+
+#library(biomformat)
+library(phyloseq)
+library(limma)
+library(edgeR)
+library(ggplot2)
+
+rm(list=ls()) # clear all
+
+args = commandArgs(trailingOnly=TRUE)
+setwd("/stornext/HPCScratch/home/allnutt.t/d/075_ELCHO_metagenome/75.13_unified_analysis/superfocus")
+getwd()
+
+otu <- read.table(file = 'lvl1.tab', header=TRUE, sep="\t",row.names=1,check.names=FALSE,stringsAsFactors = F)
+
+metadata <- read.table(file = 'mapping.txt', header=TRUE, sep="\t", row.names=1,check.names=FALSE) 
+
+varlist <- read.table('vars.txt',header=FALSE)
+
+n=0
+for (i in varlist[,1]) {
+
+n=n+1
+
+j=as.character(varlist[n,])
+print (j)
+
+testvar<-as.factor(metadata[[j]])
+meta<-metadata[[j]]
+#remove NAs.. must be coded as 'x'
+
+nas<-testvar!='x'
+
+otu2<-otu[,nas]
+testvar2<-testvar[nas]
+
+testvar2<-as.vector(testvar2)
+testvar2<-as.factor(testvar2)
+
+########################
+
+design <- model.matrix(~0 + testvar2, data=metadata)
+contdesign<-model.matrix(~0 + testvar2, data=metadata)
+
+dge <- DGEList(otu2, group = testvar2) 
+
+## all combinations of groups
+combinations <- combn(rev(colnames(contdesign)), 2, function(x){paste(x, collapse = " - ")}) 
+cont1 <- makeContrasts(contrasts = combinations, levels=design)
+
+## Running limma
+
+dgeTMM <- edgeR::calcNormFactors(dge, method = "TMM") 
+
+#v_OTU <- dgeTMM #voom(dgeTMM, design = design, plot = TRUE)
+
+## MAIN CHANGES INTRODUCED BY GORDON ##
+## Voom pipeline with structural zeros --> fixing the residual
+## df issue NOTE: a similar code would work for the
+## limma-trend pipeline using the logCPM values
+
+#PoissonFit <- glmFit(dgeTMM, design, dispersion = 0, prior.count = 0)
+#StructuralZero <- (PoissonFit$fitted.values < 1e-08 & dgeTMM$counts < 1e-08)
+
+#v_OTU_NA <- v_OTU
+#v_OTU_NA$E[StructuralZero] <- NA
+
+#corfit_NA <- duplicateCorrelation(v_OTU_NA, design, block = metadata$motherid)# If you need to account for repeated measurements use a block colum = mother otherwise use SampleID
+
+#fit_NA <- lmFit(v_OTU_NA, design = design)#, block = metadata$motherid, correlation = corfit_NA$consensus.correlation)
+fit <- lmFit(dgeTMM$counts, design = design)#, block = metadata$motherid, correlation = corfit_NA$consensus.correlation)
+
+## Some of the elements of the fitted data are changed by the
+## fitted data using NA instead of 0’s. According to Gordon,
+## this is so not all the “0’s are being included in the
+## regression”
+#fit$sigma <- fit_NA$sigma
+#fit$df.residual <- fit_NA$df.residual
+#fit$Amean <- fit_NA$Amean
+
+fit <- contrasts.fit(fit, contrasts = cont1)
+fit <- eBayes(fit, robust = FALSE)
+DT <- decideTests(fit)
+summary1<-summary(DT)
+
+top<-topTable(fit,n=Inf,coef=combinations)
+
+#write.table(summary1,paste(j,'-summary.limma'),sep="\t")
+write.table(j,'limma-all-summary.txt',sep="\t",append=TRUE)
+write.table(summary1,'limma-all-summary.txt',sep="\t",append=TRUE)
+
+write.table(top,paste('./',j,'.limma'),sep="\t")
+
+}
+
+
