@@ -29,6 +29,8 @@ varlist <- read.table(file = varlist,header=FALSE)
 
 write.table(paste("fixed","richness","shannon2","simpson",sep="\t"),outfile,col.names=FALSE,row.names=FALSE,quote=FALSE)
 
+fillcol<-as.factor(metadata$colour) #add a colour column for points
+
 #loop vars
 n=0
 for (i in varlist[,1]) {
@@ -88,9 +90,9 @@ for (i in varlist[,1]) {
 			data1<-data1[nas,]
 			p<-round(p,digits=5)
 			
-			aplot<-ggplot(data1, aes(x=xvar, y=yvar)) + geom_boxplot() + geom_jitter(width=0.1) +theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black",size = 1, linetype = "solid"),panel.grid.major = element_line(size = 0.5, linetype = 'solid',colour = "grey"),panel.grid.minor = element_line(size = 0.25, linetype = 'solid',colour = "grey"))+labs(x=j,y=paste(k,"p =",p))
+			aplot<-ggplot(data1, aes(x=xvar, y=yvar)) + geom_boxplot(outlier.shape=NA) + geom_jitter(width=0.1,colour=fillcol) +theme(axis.text.x = element_text(size=14,angle = 90),axis.text.y = element_text(size=14),panel.background = element_rect(fill = "white", colour = "black",linewidth = 1, linetype = "solid"),panel.grid.major = element_line(linewidth = 0.5, linetype = 'solid',colour = "grey"),panel.grid.minor = element_line(linewidth = 0.25, linetype = 'solid',colour = "grey"))+labs(x=j,y=paste(k,"p =",p))
 			
-			pdf(paste(outfile,"_",j,".pdf",sep=""))
+			pdf(paste(outfile,"_",j,"_",k,".pdf",sep=""))
 			print(aplot)     
 			dev.off() 
 
