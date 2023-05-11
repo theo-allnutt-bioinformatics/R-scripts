@@ -1,14 +1,9 @@
 #!/usr/bin/env Rscript
 
-#source("https://bioconductor.org/biocLite.R")
-#biocLite("ALDEx2")
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
 
-#devtools::install_github("Bioconductor-mirror/ALDEx2")
-
-#install.packages("devtools") # if not already installed
-#devtools::install_github("biomformat", "joey711")
-
-#library(biomformat)
+#BiocManager::install("ALDEx2")
 
 library("ALDEx2")
 
